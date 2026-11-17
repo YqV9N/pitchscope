@@ -443,3 +443,22 @@ export function drawOverview(canvas, state) {
   ctx.stroke();
   ctx.restore();
 }
+
+/** Level (dBFS) at a given display time, regardless of pitch voicing. */
+export function sampleLevel(track, time) {
+  const data = track?.view || track?.analysis;
+  const levels = track?.analysis?.levels;
+  if (!data || !levels || !data.times.length) return null;
+  const times = data.times;
+  let lo = 0;
+  let hi = times.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] < time) lo = mid + 1;
+    else hi = mid;
+  }
+  let idx = lo;
+  if (idx > 0 && Math.abs(times[idx - 1] - time) < Math.abs(times[idx] - time)) idx--;
+  const rms = levels[idx] || 0;
+  return rms > 1e-6 ? 20 * Math.log10(rms) : -60;
+}

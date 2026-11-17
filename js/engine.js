@@ -258,12 +258,14 @@ export class Engine {
     const times = new Float32Array(count);
     const freqs = new Float32Array(count);
     const clarity = new Float32Array(count);
+    const levels = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
       if (token?.cancelled) throw new Error('已取消');
       const frame = data.subarray(i * hop, i * hop + W);
       const result = detector.detect(frame);
       times[i] = (i * hop + W / 2) / sr;
+      if (result) levels[i] = result.rms;
       if (result && result.freq > 0) {
         freqs[i] = result.freq;
         clarity[i] = result.clarity;
@@ -290,7 +292,7 @@ export class Engine {
     }
 
     onProgress?.(1);
-    return { times, freqs, clarity, hop, sampleRate: sr, frameSize: W };
+    return { times, freqs, clarity, levels, hop, sampleRate: sr, frameSize: W };
   }
 
   removeTrack(id) {

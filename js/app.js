@@ -1,7 +1,7 @@
 // UI wiring: transport, tracks, readouts, canvas interaction, settings, PWA.
 import { Engine, formatTime } from './engine.js';
 import { describeNote, freqToMidi, midiToFreq } from './pitch.js';
-import { drawView, drawOverview, sampleTrack, geometry } from './render.js';
+import { drawView, drawOverview, sampleTrack, sampleLevel, geometry } from './render.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -42,6 +42,7 @@ const state = {
     windowSec: 10,
     lineMode: 'follow',
     lineDrag: 'freeze',
+    showDb: true,
   },
   view: { t0: 0, t1: 10, fMin: 65, fMax: 1600 },
   micSmoothMidi: 0,
@@ -108,6 +109,7 @@ const el = {
   btnMode: $('#btn-mode'),
   modeLabel: $('#mode-label'),
   lineDragSelect: $('#line-drag-select'),
+  dbToggle: $('#db-toggle'),
   timeDisplay: $('#time-display'),
   windowSelect: $('#window-select'),
   rangeSelect: $('#range-select'),
@@ -136,6 +138,7 @@ function loadSettings() {
       windowSec: [5, 10, 20, 30].includes(Number(raw.windowSec)) ? Number(raw.windowSec) : 10,
       lineMode: raw.lineMode === 'fixed' ? 'fixed' : 'follow',
       lineDrag: ['freeze', 'scroll', 'pause'].includes(raw.lineDrag) ? raw.lineDrag : 'freeze',
+      showDb: raw.showDb !== false,
     };
     const hf = Number(raw.headFrac);
     if (Number.isFinite(hf)) state.headFrac = Math.min(0.92, Math.max(0.08, hf));
@@ -152,6 +155,10 @@ function saveSettings() {
   }
 }
 
+function applyDbVisibility() {
+  el.readouts.classList.toggle('hide-db', state.settings.showDb === false);
+}
+
 function applySettings() {
   const preset = PRESETS[state.settings.range] ?? PRESETS.voice;
   const sens = SENS[state.settings.sensitivity] ?? SENS.normal;
@@ -164,6 +171,8 @@ function applySettings() {
   el.sensSelect.value = state.settings.sensitivity;
   el.windowSelect.value = String(state.settings.windowSec);
   el.lineDragSelect.value = state.settings.lineDrag;
+  el.dbToggle.checked = state.settings.showDb !== false;
+  applyDbVisibility();
   saveSettings();
 }
 
@@ -305,6 +314,7 @@ function readoutCard(track, isMic) {
       </div>
       <div class="ro-value"><span class="ro-note dim">—</span></div>
       <div class="ro-foot"><span class="ro-freq">— Hz</span><span class="ro-cents">—</span></div>
+      <div class="ro-level"><span class="ro-level-track"><i></i></span><span class="ro-db">— dB</span></div>
       <div class="ro-strip"><span class="ro-mark"></span></div>
     </article>`;
 }
@@ -339,20 +349,27 @@ function updateEmpty() {
   el.empty.classList.toggle('hidden', !empty);
 }
 
-function setCard(id, freq) {
+function setCard(id, freq, db) {
   const card = el.readouts.querySelector(`[data-card="${id}"]`);
   if (!card) return;
   const noteEl = card.querySelector('.ro-note');
   const freqEl = card.querySelector('.ro-freq');
   const centsEl = card.querySelector('.ro-cents');
   const mark = card.querySelector('.ro-mark');
+  const dbEl = card.querySelector('.ro-db');
+  const levelBar = card.querySelector('.ro-level-track i');
+
+  const hasDb = Number.isFinite(db) && db > -59.5;
+  if (dbEl) dbEl.textContent = hasDb ? `${Math.round(db)} dB` : '— dB';
+  if (levelBar) levelBar.style.width = hasDb ? `${Math.max(2, Math.min(100, ((db + 60) / 60) * 100))}%` : '0%';
+
   if (!freq) {
     noteEl.textContent = '—';
     noteEl.classList.add('dim');
     freqEl.textContent = '— Hz';
     centsEl.textContent = '—';
     mark.style.left = '50%';
-    card.classList.add('silent');
+    card.classList.toggle('silent', !hasDb || db < -45);
     return;
   }
   const d = describeNote(freq);
@@ -379,12 +396,12 @@ function updateReadouts(force = false) {
   for (const track of engine.fileTracks) {
     const p = sampleTrack(track, pos);
     const freq = p && p.clarity >= 0.45 ? p.freq : 0;
-    setCard(track.id, freq);
+    setCard(track.id, freq, sampleLevel(track, pos));
     setRowNote(track.id, freq);
   }
   if (engine.mic.active) {
     const freq = state.micLast?.freq || 0;
-    setCard('mic', freq);
+    setCard('mic', freq, state.micLast?.db ?? -60);
     setRowNote('mic', freq);
   }
 
@@ -436,8 +453,9 @@ function currentView() {
 function pollMic(hasFiles) {
   const r = engine.readMic();
   const stamp = hasFiles ? engine.position : state.micClock;
+  const db = r && r.rms > 0 ? 20 * Math.log10(Math.max(r.rms, 1e-6)) : -60;
   if (!r || !r.freq) {
-    state.micLast = null;
+    state.micLast = { freq: 0, db };
     state.micSmoothMidi = 0;
     state.micCandidate = null;
     return;
@@ -462,7 +480,7 @@ function pollMic(hasFiles) {
     state.micSmoothMidi = midi;
   }
   const freq = midiToFreq(state.micSmoothMidi);
-  state.micLast = { freq, midi: state.micSmoothMidi, clarity: r.clarity };
+  state.micLast = { freq, midi: state.micSmoothMidi, clarity: r.clarity, db };
 
   const track = engine.mic.track;
   if (!track) return;
@@ -1004,6 +1022,13 @@ function bindEvents() {
     state.settings.lineDrag = el.lineDragSelect.value;
     saveSettings();
     toast('拖动白线的方式已更新', 2600);
+  });
+  el.dbToggle.addEventListener('change', () => {
+    state.settings.showDb = el.dbToggle.checked;
+    saveSettings();
+    applyDbVisibility();
+    updateReadouts(true);
+    toast(state.settings.showDb ? '已显示分贝电平' : '已隐藏分贝电平', 2200);
   });
   el.settingsReanalyze.addEventListener('click', () => {
     el.settingsPanel.classList.add('hidden');
