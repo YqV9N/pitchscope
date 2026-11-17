@@ -1,5 +1,5 @@
 // Offline shell for PitchScope. Bump CACHE when deploying new assets.
-const CACHE = 'pitchscope-v11';
+const CACHE = 'pitchscope-v13';
 const ASSETS = [
   './',
   './index.html',
