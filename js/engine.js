@@ -47,7 +47,11 @@ export class Engine {
   async init() {
     if (this.ctx) return this.ctx;
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) throw new Error('当前浏览器不支持 Web Audio');
+    if (!AC) {
+      const err = new Error('Web Audio is not supported');
+      err.code = 'audio-context';
+      throw err;
+    }
     this.ctx = new AC({ latencyHint: 'interactive' });
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.9;
@@ -139,16 +143,27 @@ export class Engine {
    */
   async addFile(file, { color, onProgress, token } = {}) {
     await this.resume();
-    if (file.size > 120 * 1024 * 1024) throw new Error('文件过大（>120MB）');
+    if (file.size > 120 * 1024 * 1024) {
+      const err = new Error('File too large');
+      err.code = 'too-large';
+      throw err;
+    }
 
     let buffer;
     try {
       const bytes = await file.arrayBuffer();
       buffer = await this.ctx.decodeAudioData(bytes);
     } catch {
-      throw new Error(`无法解码「${file.name}」，请换 MP3 / WAV / M4A / OGG 格式`);
+      const err = new Error('Could not decode audio');
+      err.code = 'decode';
+      err.fileName = file.name;
+      throw err;
     }
-    if (buffer.duration > MAX_DURATION) throw new Error('音频超过 10 分钟，暂不支持');
+    if (buffer.duration > MAX_DURATION) {
+      const err = new Error('Audio too long');
+      err.code = 'too-long';
+      throw err;
+    }
 
     const analysis = await this._analyze(buffer, onProgress, token);
 
@@ -660,7 +675,9 @@ export class Engine {
       throw err;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error('浏览器不支持麦克风采集');
+      const err = new Error('Mic capture not supported');
+      err.code = 'mic-unsupported';
+      throw err;
     }
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {

@@ -31,28 +31,29 @@
           </svg>
           <div class="brand-text">
             <strong>PitchScope</strong>
-            <span>音高仪 · 多轨可视化</span>
+            <span data-i18n="brand.subtitle">音高仪 · 多轨可视化</span>
           </div>
         </div>
 
         <div class="top-actions">
-          <button id="btn-import" class="btn btn-primary" type="button" aria-label="导入音频">
+          <button id="btn-import" class="btn btn-primary" type="button" aria-label="导入音频" data-i18n-aria="act.import">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
-            <span>导入音频</span>
+            <span data-i18n="act.import">导入音频</span>
           </button>
-          <button id="btn-mic" class="btn" type="button" aria-pressed="false" aria-label="麦克风">
+          <button id="btn-mic" class="btn" type="button" aria-pressed="false" aria-label="麦克风" data-i18n-aria="act.mic">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
-            <span>麦克风</span>
+            <span data-i18n="act.mic">麦克风</span>
           </button>
           <button id="btn-record" class="btn btn-record" type="button" aria-pressed="false" aria-label="录制音频">
             <span class="rec-dot"></span>
-            <span id="record-label">录制</span>
+            <span id="record-label" data-i18n="act.record">录制</span>
           </button>
-          <button id="btn-demo" class="btn btn-ghost" type="button" title="生成一段示例旋律" aria-label="生成示例旋律">
+          <button id="btn-demo" class="btn btn-ghost" type="button" title="生成一段示例旋律" aria-label="生成示例旋律" data-i18n-title="act.demoTitle" data-i18n-aria="act.demoTitle">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v11" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="16.5" cy="15" r="2.5" /></svg>
-            <span>示例</span>
+            <span data-i18n="act.demo">示例</span>
           </button>
-          <button id="btn-settings" class="btn btn-icon" type="button" aria-label="设置" aria-expanded="false">
+          <button id="btn-lang" class="btn btn-ghost" type="button" title="切换为 English" aria-label="切换语言" data-i18n-title="act.langTitle" data-i18n-aria="act.langTitle"><span id="lang-label" class="lang-label">EN</span></button>
+          <button id="btn-settings" class="btn btn-icon" type="button" aria-label="设置" aria-expanded="false" data-i18n-aria="act.settings">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" /></svg>
           </button>
         </div>
@@ -68,19 +69,19 @@
 
               <button id="btn-follow" class="follow-btn hidden" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
-                <span>回到当前</span>
+                <span data-i18n="follow.return">回到当前</span>
               </button>
 
               <div id="empty" class="empty">
                 <div class="empty-inner">
-                  <h1>看见你的音高</h1>
-                  <p>导入一首歌，对着麦克风唱或演奏，<br />多条音高曲线会同时出现在屏幕上。</p>
+                  <h1 data-i18n="empty.title">看见你的音高</h1>
+                  <p data-i18n-html="empty.desc">导入一首歌，对着麦克风唱或演奏，<br />多条音高曲线会同时出现在屏幕上。</p>
                   <div class="empty-actions">
-                    <button id="empty-import" class="btn btn-primary" type="button">导入音频</button>
-                    <button id="empty-mic" class="btn" type="button">打开麦克风</button>
-                    <button id="empty-demo" class="btn btn-ghost" type="button">先看示例</button>
+                    <button id="empty-import" class="btn btn-primary" type="button" data-i18n="empty.import">导入音频</button>
+                    <button id="empty-mic" class="btn" type="button" data-i18n="empty.mic">打开麦克风</button>
+                    <button id="empty-demo" class="btn btn-ghost" type="button" data-i18n="empty.demo">先看示例</button>
                   </div>
-                  <p class="empty-hint">支持 MP3 / WAV / M4A / OGG / FLAC · 数据只在本机处理</p>
+                  <p class="empty-hint" data-i18n="empty.hint">支持 MP3 / WAV / M4A / OGG / FLAC · 数据只在本机处理</p>
                 </div>
               </div>
 
@@ -93,20 +94,20 @@
                   <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
                   <div class="progress-foot">
                     <span>音高提取完全在本地完成，不会上传</span>
-                    <button id="progress-cancel" class="btn btn-tiny" type="button">取消</button>
+                    <button id="progress-cancel" class="btn btn-tiny" type="button" data-i18n="act.cancel">取消</button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <canvas id="overview" title="点击跳转"></canvas>
+            <canvas id="overview" title="点击跳转" data-i18n-title="overview.title"></canvas>
 
             <div class="transport">
-              <button id="btn-play" class="transport-play" type="button" aria-label="播放">
+              <button id="btn-play" class="transport-play" type="button" aria-label="播放" data-i18n-aria="transport.play">
                 <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" /></svg>
                 <svg class="icon-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
               </button>
-              <button id="btn-stop" class="transport-btn" type="button" aria-label="停止">
+              <button id="btn-stop" class="transport-btn" type="button" aria-label="停止" data-i18n-aria="transport.stop">
                 <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" /></svg>
               </button>
               <div id="time-display" class="time-display"><span>0:00</span><i>/</i><em>0:00</em></div>
@@ -116,85 +117,85 @@
                 <span id="mode-label">跟随</span>
               </button>
               <label class="select-inline" for="window-select">
-                <span>窗口</span>
+                <span data-i18n="transport.window">窗口</span>
                 <select id="window-select">
-                  <option value="5">5 秒</option>
-                  <option value="10">10 秒</option>
-                  <option value="20">20 秒</option>
-                  <option value="30">30 秒</option>
+                  <option value="5" data-i18n="transport.sec5">5 秒</option>
+                  <option value="10" data-i18n="transport.sec10">10 秒</option>
+                  <option value="20" data-i18n="transport.sec20">20 秒</option>
+                  <option value="30" data-i18n="transport.sec30">30 秒</option>
                 </select>
               </label>
-              <span class="hint">拖动谱面调整白线位置 · 空格播放</span>
+              <span class="hint" data-i18n="transport.hint">拖动谱面调整白线位置 · 空格播放</span>
             </div>
           </div>
         </section>
 
         <aside class="side">
           <div class="side-head">
-            <h2>音轨 <span id="track-count">0</span></h2>
-            <span class="side-sub" id="mic-state">麦克风未开启</span>
+            <h2><span data-i18n="side.tracks">音轨</span> <b id="track-count">0</b></h2>
+            <span class="side-sub" id="mic-state" data-i18n="side.micOff">麦克风未开启</span>
           </div>
           <div id="tracks" class="tracks"></div>
           <div class="side-foot">
-            <p>每条曲线对应一个音源。导入多个文件，就会得到多条线。</p>
-            <p class="muted">提示：耳机能减少麦克风收到伴奏的串音。</p>
+            <p data-i18n="side.foot1">每条曲线对应一个音源。导入多个文件，就会得到多条线。</p>
+            <p class="muted" data-i18n="side.foot2">提示：耳机能减少麦克风收到伴奏的串音。</p>
           </div>
         </aside>
       </main>
 
       <div id="settings-panel" class="settings hidden" role="dialog" aria-label="设置">
         <div class="settings-head">
-          <h3>音高设置</h3>
-          <button id="settings-close" class="btn btn-icon" type="button" aria-label="关闭">✕</button>
+          <h3 data-i18n="settings.title">音高设置</h3>
+          <button id="settings-close" class="btn btn-icon" type="button" aria-label="关闭" data-i18n-aria="settings.close">✕</button>
         </div>
         <label class="field">
-          <span>检测音域</span>
+          <span data-i18n="settings.range">检测音域</span>
           <select id="range-select">
-            <option value="voice">人声 / 吉他（65–1600 Hz）</option>
-            <option value="bass">低音（40–500 Hz）</option>
-            <option value="high">高音（180–2600 Hz）</option>
-            <option value="wide">全音域（40–3000 Hz）</option>
+            <option value="voice" data-i18n="range.voice">人声 / 吉他（65–1600 Hz）</option>
+            <option value="bass" data-i18n="range.bass">低音（40–500 Hz）</option>
+            <option value="high" data-i18n="range.high">高音（180–2600 Hz）</option>
+            <option value="wide" data-i18n="range.wide">全音域（40–3000 Hz）</option>
           </select>
         </label>
         <label class="field">
-          <span>灵敏度</span>
+          <span data-i18n="settings.sens">灵敏度</span>
           <select id="sens-select">
-            <option value="strict">严格（少一些误判）</option>
-            <option value="normal">标准</option>
-            <option value="loose">宽松（弱声也能抓）</option>
+            <option value="strict" data-i18n="sens.strict">严格（少一些误判）</option>
+            <option value="normal" data-i18n="sens.normal">标准</option>
+            <option value="loose" data-i18n="sens.loose">宽松（弱声也能抓）</option>
           </select>
         </label>
         <label class="field">
-          <span>拖动白线时（固定线模式）</span>
+          <span data-i18n="settings.lineDrag">拖动白线时（固定线模式）</span>
           <select id="line-drag-select">
-            <option value="freeze">谱面冻结，音频继续</option>
-            <option value="scroll">谱面照常滚动，音频继续</option>
-            <option value="pause">谱面和音频都暂停</option>
+            <option value="freeze" data-i18n="linedrag.freeze">谱面冻结，音频继续</option>
+            <option value="scroll" data-i18n="linedrag.scroll">谱面照常滚动，音频继续</option>
+            <option value="pause" data-i18n="linedrag.pause">谱面和音频都暂停</option>
           </select>
         </label>
         <label class="field switch-field">
-          <span>显示分贝（dBFS 电平）</span>
+          <span data-i18n="settings.db">显示分贝（dBFS 电平）</span>
           <input id="db-toggle" class="switch" type="checkbox" checked />
         </label>
-        <div class="settings-note">
+        <div class="settings-note" data-i18n="settings.note">
           改动会立即作用于麦克风；已导入的音频会保持导入时的分析结果。
         </div>
-        <button id="settings-reanalyze" class="btn btn-block" type="button">按新设置重新分析已导入音频</button>
+        <button id="settings-reanalyze" class="btn btn-block" type="button" data-i18n="settings.reanalyze">按新设置重新分析已导入音频</button>
       </div>
 
 
       <div id="track-panel" class="track-panel hidden" role="dialog" aria-label="音轨设置">
         <div class="track-panel-head">
           <div class="tp-title"><span id="tp-dot" class="tp-dot"></span><h3 id="tp-name">音轨</h3></div>
-          <button id="tp-close" class="btn btn-icon" type="button" aria-label="关闭">✕</button>
+          <button id="tp-close" class="btn btn-icon" type="button" aria-label="关闭" data-i18n-aria="settings.close">✕</button>
         </div>
         <label class="field">
-          <span>音量 <b id="tp-volume-val">100%</b></span>
+          <span><span data-i18n="tp.volume">音量</span> <b id="tp-volume-val">100%</b></span>
           <input id="tp-volume" class="range" type="range" min="0" max="150" step="5" value="100" />
         </label>
         <div class="field-row">
           <label class="field">
-            <span>倍速</span>
+            <span data-i18n="tp.speed">倍速</span>
             <select id="tp-speed">
               <option value="0.5">0.5×</option>
               <option value="0.75">0.75×</option>
@@ -205,21 +206,21 @@
             </select>
           </label>
           <label class="field">
-            <span>变速方式</span>
+            <span data-i18n="tp.pitch">变速方式</span>
             <div class="seg" id="tp-pitch-seg">
-              <button type="button" data-mode="preserve" class="active">保持音高</button>
-              <button type="button" data-mode="shift">变调</button>
+              <button type="button" data-mode="preserve" class="active" data-i18n="tp.keep">保持音高</button>
+              <button type="button" data-mode="shift" data-i18n="tp.shift">变调</button>
             </div>
           </label>
         </div>
         <label class="field">
-          <span>谱面颜色</span>
+          <span data-i18n="tp.color">谱面颜色</span>
           <input id="tp-color" class="color-input" type="color" value="#38e0d0" />
         </label>
         <div class="tp-actions">
-          <button id="tp-export" class="btn btn-block" type="button">导出这条音轨 WAV</button>
+          <button id="tp-export" class="btn btn-block" type="button" data-i18n="tp.export">导出这条音轨 WAV</button>
         </div>
-        <p class="settings-note">音量、倍速、颜色立即生效；保持音高会做时间拉伸，可能有轻微颗粒感。</p>
+        <p class="settings-note" data-i18n="tp.note">音量、倍速、颜色立即生效；保持音高会做时间拉伸，可能有轻微颗粒感。</p>
       </div>
       <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac" multiple hidden />
       <div id="toast" class="toast" role="status"></div>

@@ -2,6 +2,7 @@
 import { Engine, formatTime } from './engine.js';
 import { describeNote, freqToMidi, midiToFreq } from './pitch.js';
 import { drawView, drawOverview, sampleTrack, sampleLevel, geometry } from './render.js';
+import { translate } from './i18n.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -43,6 +44,7 @@ const state = {
     lineMode: 'follow',
     lineDrag: 'freeze',
     showDb: true,
+    lang: (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en',
   },
   view: { t0: 0, t1: 10, fMin: 65, fMax: 1600 },
   micSmoothMidi: 0,
@@ -93,6 +95,8 @@ const el = {
   btnPlay: $('#btn-play'),
   btnStop: $('#btn-stop'),
   btnSettings: $('#btn-settings'),
+  btnLang: $('#btn-lang'),
+  langLabel: $('#lang-label'),
   btnRecord: $('#btn-record'),
   recordLabel: $('#record-label'),
   trackPanel: $('#track-panel'),
@@ -139,6 +143,7 @@ function loadSettings() {
       lineMode: raw.lineMode === 'fixed' ? 'fixed' : 'follow',
       lineDrag: ['freeze', 'scroll', 'pause'].includes(raw.lineDrag) ? raw.lineDrag : 'freeze',
       showDb: raw.showDb !== false,
+      lang: raw.lang === 'en' || raw.lang === 'zh' ? raw.lang : state.settings.lang,
     };
     const hf = Number(raw.headFrac);
     if (Number.isFinite(hf)) state.headFrac = Math.min(0.92, Math.max(0.08, hf));
@@ -174,6 +179,56 @@ function applySettings() {
   el.dbToggle.checked = state.settings.showDb !== false;
   applyDbVisibility();
   saveSettings();
+}
+
+function t(key, vars) {
+  return translate(state.settings.lang, key, vars);
+}
+
+function errorText(err) {
+  if (err?.code === 'too-large') return t('error.tooLarge');
+  if (err?.code === 'decode') return t('error.decode', { name: err.fileName || '' });
+  if (err?.code === 'too-long') return t('error.tooLong');
+  if (err?.code === 'audio-context') return t('error.audioContext');
+  return err?.message || String(err);
+}
+
+function displayName(track) {
+  if (!track) return '';
+  if (track.kind === 'mic') return t('name.mic');
+  if (track.nameKey) return t(track.nameKey, { n: track.nameNum ?? '' });
+  return track.name;
+}
+
+function applyLanguage() {
+  const lang = state.settings.lang === 'en' ? 'en' : 'zh';
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('doc.title');
+
+  for (const node of document.querySelectorAll('[data-i18n]')) {
+    node.textContent = t(node.dataset.i18n);
+  }
+  for (const node of document.querySelectorAll('[data-i18n-html]')) {
+    node.innerHTML = t(node.dataset.i18nHtml);
+  }
+  for (const node of document.querySelectorAll('[data-i18n-title]')) {
+    node.title = t(node.dataset.i18nTitle);
+  }
+  for (const node of document.querySelectorAll('[data-i18n-aria]')) {
+    node.setAttribute('aria-label', t(node.dataset.i18nAria));
+  }
+
+  el.langLabel.textContent = t('act.lang');
+  el.btnLang.setAttribute('aria-label', t('act.langTitle'));
+  el.btnLang.title = t('act.langTitle');
+
+  updateModeUI();
+  updateMicUI();
+  updateRecordUI();
+  const track = panelTrack();
+  if (track) el.tpName.textContent = displayName(track);
+  refreshTracks();
+  updateReadouts(true);
 }
 
 /* ------------------------------------------------------------------ */
@@ -243,12 +298,10 @@ function updateFollowButton() {
 
 function updateModeUI() {
   const fixed = isFixedLine();
-  el.modeLabel.textContent = fixed ? '固定线' : '跟随';
+  el.modeLabel.textContent = t(fixed ? 'mode.fixed' : 'mode.follow');
   el.btnMode.classList.toggle('fixed', fixed);
   el.btnMode.setAttribute('aria-pressed', String(fixed));
-  el.btnMode.title = fixed
-    ? '当前：固定白线，谱面滚动。点击切换为跟随播放'
-    : '当前：跟随播放。点击切换为固定白线';
+  el.btnMode.title = t(fixed ? 'mode.tipFixed' : 'mode.tipFollow');
   el.lineDragSelect.disabled = !fixed;
   updateFollowButton();
 }
@@ -259,12 +312,7 @@ function setLineMode(mode) {
   saveSettings();
   updateModeUI();
   updateReadouts(true);
-  toast(
-    mode === 'fixed'
-      ? '固定白线：谱面从白线下滚过；拖白线只改它在屏幕上的位置'
-      : '跟随播放：白线随播放前进，拖开谱面后可点「回到当前」',
-    4200,
-  );
+  toast(t(mode === 'fixed' ? 'mode.toastFixed' : 'mode.toastFollow'), 4200);
 }
 
 /* ------------------------------------------------------------------ */
@@ -288,18 +336,18 @@ function resize() {
 
 function trackRow(track, isMic) {
   const sub = isMic
-    ? `<span>实时输入</span><span class="t-note" data-note="mic">—</span>`
-    : `<span>音频</span><span>${formatTime(track.duration)}</span><span class="t-note" data-note="${track.id}">—</span>`;
+    ? `<span>${t('kind.liveInput')}</span><span class="t-note" data-note="mic">—</span>`
+    : `<span>${t('kind.audio')}</span><span>${formatTime(track.duration)}</span><span class="t-note" data-note="${track.id}">—</span>`;
   const actions = isMic
-    ? `<button class="icon-btn" data-act="remove" title="关闭麦克风" aria-label="关闭麦克风">${icon('trash')}</button>`
-    : `<button class="icon-btn ${track.visible ? '' : 'off'}" data-act="visible" title="显示 / 隐藏">${icon(track.visible ? 'eye' : 'eyeOff')}</button>
-       <button class="icon-btn ${track.muted ? 'off' : ''}" data-act="mute" title="静音">${icon(track.muted ? 'mute' : 'sound')}</button>
-       <button class="icon-btn" data-act="settings" title="音量 / 倍速 / 颜色">${icon('sliders')}</button>
-       <button class="icon-btn" data-act="remove" title="移除音轨">${icon('trash')}</button>`;
+    ? `<button class="icon-btn" data-act="remove" title="${t('track.removeMic')}" aria-label="${t('track.removeMic')}">${icon('trash')}</button>`
+    : `<button class="icon-btn ${track.visible ? '' : 'off'}" data-act="visible" title="${t('track.show')}">${icon(track.visible ? 'eye' : 'eyeOff')}</button>
+       <button class="icon-btn ${track.muted ? 'off' : ''}" data-act="mute" title="${t('track.mute')}">${icon(track.muted ? 'mute' : 'sound')}</button>
+       <button class="icon-btn" data-act="settings" title="${t('track.settings')}">${icon('sliders')}</button>
+       <button class="icon-btn" data-act="remove" title="${t('track.remove')}">${icon('trash')}</button>`;
   return `<div class="track" data-id="${isMic ? 'mic' : track.id}" style="--c:${track.color}">
       <span class="t-dot"></span>
       <div class="t-main">
-        <div class="t-name" title="${esc(track.name)}">${esc(track.name)}</div>
+        <div class="t-name" title="${esc(displayName(track))}">${esc(displayName(track))}</div>
         <div class="t-sub">${sub}</div>
       </div>
       <div class="t-actions">${actions}</div>
@@ -309,8 +357,8 @@ function trackRow(track, isMic) {
 function readoutCard(track, isMic) {
   return `<article class="readout silent" data-card="${track.id}" style="--c:${track.color}">
       <div class="ro-top">
-        <i class="dot"></i><span class="ro-name">${esc(track.name)}</span>
-        <span class="ro-tag">${isMic ? '实时' : '音频'}</span>
+        <i class="dot"></i><span class="ro-name">${esc(displayName(track))}</span>
+        <span class="ro-tag">${t(isMic ? 'kind.live' : 'kind.audio')}</span>
       </div>
       <div class="ro-value"><span class="ro-note dim">—</span></div>
       <div class="ro-foot"><span class="ro-freq">— Hz</span><span class="ro-cents">—</span></div>
@@ -409,7 +457,7 @@ function updateReadouts(force = false) {
   el.timeDisplay.children[0].textContent = formatTime(pos);
   el.timeDisplay.children[2].textContent = formatTime(duration);
   el.btnPlay.classList.toggle('playing', engine.playing);
-  el.btnPlay.setAttribute('aria-label', engine.playing ? '暂停' : '播放');
+  el.btnPlay.setAttribute('aria-label', t(engine.playing ? 'transport.pause' : 'transport.play'));
   el.btnStop.disabled = !engine.fileTracks.length;
 }
 
@@ -504,7 +552,7 @@ async function toggleMic() {
     resetMicTimeline();
     updateMicUI();
     refreshTracks();
-    toast('麦克风已关闭');
+    toast(t('mic.off'));
     return;
   }
   try {
@@ -520,13 +568,15 @@ async function toggleMic() {
   } catch (err) {
     const name = err?.name || '';
     if (name === 'NotAllowedError' || name === 'SecurityError') {
-      toast('麦克风权限被拒绝。请在浏览器地址栏的权限设置里允许麦克风。', 5200);
+      toast(t('mic.denied'), 5200);
     } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-      toast('没有找到可用的麦克风设备。');
+      toast(t('mic.notFound'));
     } else if (name === 'InsecureContext' || !window.isSecureContext) {
-      toast('麦克风只能在 HTTPS 或 localhost 下使用。', 5200);
+      toast(t('mic.insecure'), 5200);
+    } else if (err?.code === 'mic-unsupported') {
+      toast(t('mic.unsupported'));
     } else {
-      toast(`麦克风打开失败：${err?.message || err}`);
+      toast(t('mic.fail', { msg: err?.message || err }));
     }
   }
 }
@@ -534,8 +584,9 @@ async function toggleMic() {
 function updateMicUI() {
   const on = engine.mic.active;
   el.btnMic.setAttribute('aria-pressed', String(on));
-  el.btnMic.querySelector('span').textContent = on ? '麦克风已开' : '麦克风';
-  el.micState.textContent = on ? '麦克风采集中' : '麦克风未开启';
+  el.btnMic.setAttribute('aria-label', t(on ? 'act.micOn' : 'act.mic'));
+  el.btnMic.querySelector('span').textContent = t(on ? 'act.micOn' : 'act.mic');
+  el.micState.textContent = t(on ? 'side.micLive' : 'side.micOff');
 }
 
 /* ------------------------------------------------------------------ */
@@ -558,18 +609,18 @@ async function addFiles(fileList) {
     (f) => f.type.startsWith('audio/') || /\.(mp3|wav|m4a|ogg|flac|aac|opus|webm)$/i.test(f.name),
   );
   if (!files.length) {
-    toast('请选择音频文件（MP3 / WAV / M4A / OGG / FLAC）');
+    toast(t('toast.pickFile'));
     return;
   }
   if (state.busy) {
-    toast('正在处理上一个文件，请稍候');
+    toast(t('toast.busy'));
     return;
   }
 
   state.busy = true;
   const token = { cancelled: false };
   state.cancelToken = token;
-  showProgress(true, '准备中…');
+  showProgress(true, t('progress.preparing'));
   setProgress(0);
 
   try {
@@ -577,7 +628,7 @@ async function addFiles(fileList) {
       if (token.cancelled) break;
       const file = files[i];
       const hadFiles = engine.fileTracks.length > 0;
-      el.progressLabel.textContent = `正在分析 ${i + 1}/${files.length} · ${file.name}`;
+      el.progressLabel.textContent = t('progress.analyzing', { i: i + 1, n: files.length, name: file.name });
       await engine.addFile(file, {
         color: nextColor(),
         token,
@@ -585,15 +636,15 @@ async function addFiles(fileList) {
       });
       if (!hadFiles) resetMicTimeline();
       refreshTracks();
-      toast(`已加入「${file.name.replace(/\.[^.]+$/, '')}」`);
+      toast(t('toast.added', { name: file.name.replace(/\.[^.]+$/, '') }));
       if (!state.tipShown) {
         state.tipShown = true;
-        setTimeout(() => toast('拖动谱面滚动 · 拖动白线调整位置', 5000), 3200);
+        setTimeout(() => toast(t('toast.tip'), 5000), 3200);
       }
     }
   } catch (err) {
-    if (token.cancelled) toast('已取消分析');
-    else toast(err?.message || '导入失败，请确认文件格式');
+    if (token.cancelled) toast(t('toast.cancelled'));
+    else toast(errorText(err) || t('toast.importFail'));
   } finally {
     state.busy = false;
     state.cancelToken = null;
@@ -606,17 +657,18 @@ async function addFiles(fileList) {
 async function addDemo() {
   if (state.busy) return;
   state.busy = true;
-  showProgress(true, '正在生成示例旋律…');
+  showProgress(true, t('progress.demo'));
   setProgress(0.4);
   try {
     const hadFiles = engine.fileTracks.length > 0;
-    await engine.addDemo(nextColor());
+    const demo = await engine.addDemo(nextColor());
+    demo.nameKey = 'name.demo';
     if (!hadFiles) resetMicTimeline();
     refreshTracks();
     resize();
-    toast('示例已生成，点播放试试');
+    toast(t('toast.demoReady'));
   } catch (err) {
-    toast(err?.message || '示例生成失败');
+    toast(errorText(err) || t('toast.demoFail'));
   } finally {
     state.busy = false;
     showProgress(false);
@@ -626,24 +678,24 @@ async function addDemo() {
 async function reanalyzeAll() {
   const tracks = engine.fileTracks;
   if (!tracks.length) {
-    toast('还没有导入音频');
+    toast(t('toast.noAudio'));
     return;
   }
   if (state.busy) return;
   state.busy = true;
   const token = { cancelled: false };
   state.cancelToken = token;
-  showProgress(true, '按新设置重新分析…');
+  showProgress(true, t('progress.reanalyze'));
   setProgress(0);
   try {
     for (let i = 0; i < tracks.length; i++) {
       if (token.cancelled) break;
-      el.progressLabel.textContent = `重新分析 ${i + 1}/${tracks.length} · ${tracks[i].name}`;
+      el.progressLabel.textContent = t('progress.reanalyzing', { i: i + 1, n: tracks.length, name: displayName(tracks[i]) });
       await engine.reanalyze(tracks[i], (ratio) => setProgress((i + ratio) / tracks.length), token);
     }
-    toast('已按新设置更新分析结果');
+    toast(t('toast.reanalyzed'));
   } catch (err) {
-    toast(err?.message || '重新分析失败');
+    toast(errorText(err) || t('toast.reanalyzeFail'));
   } finally {
     state.busy = false;
     state.cancelToken = null;
@@ -680,10 +732,11 @@ function downloadBlob(blob, filename) {
 
 function updateRecordUI() {
   const secs = state.recording ? (performance.now() - state.recStartedAt) / 1000 : 0;
-  el.recordLabel.textContent = state.recording ? `停止 ${formatTime(secs)}` : '录制';
-  el.btnRecord.title = state.recording ? '点击停止录制' : '录制麦克风 + 播放中的伴奏';
+  el.recordLabel.textContent = state.recording ? t('act.stopRec', { time: formatTime(secs) }) : t('act.record');
+  el.btnRecord.title = t(state.recording ? 'rec.stopTitle' : 'rec.startTitle');
   el.btnRecord.classList.toggle('recording', state.recording);
   el.btnRecord.setAttribute('aria-pressed', String(state.recording));
+  el.btnRecord.setAttribute('aria-label', t(state.recording ? 'rec.stopTitle' : 'act.record'));
 }
 
 async function toggleRecord() {
@@ -701,15 +754,15 @@ async function toggleRecord() {
       updateRecordUI();
       if (performance.now() - state.recStartedAt > 5 * 60 * 1000) stopRecordingFlow();
     }, 500);
-    toast('开始录制：麦克风 + 正在播放的伴奏（戴耳机可减少串音）', 4500);
+    toast(t('rec.start'), 4500);
   } catch (err) {
     const name = err?.name || '';
     if (name === 'NotAllowedError' || name === 'SecurityError') {
-      toast('麦克风权限被拒绝，无法录制。', 4800);
+      toast(t('rec.denied'), 4800);
     } else if (!window.isSecureContext) {
-      toast('录制需要 HTTPS 或 localhost。', 4800);
+      toast(t('rec.insecure'), 4800);
     } else {
-      toast(`开始录制失败：${err?.message || err}`);
+      toast(t('rec.startFail', { msg: err?.message || err }));
     }
   }
 }
@@ -723,7 +776,7 @@ async function stopRecordingFlow() {
 
   const data = engine.stopRecording();
   if (!data || data.duration < 0.4) {
-    toast('录音太短，没有保存');
+    toast(t('rec.tooShort'));
     return;
   }
   engine.pause();
@@ -734,32 +787,35 @@ async function stopRecordingFlow() {
     for (const track of engine.fileTracks) engine.setMuted(track.id, true);
   }
   state.recCount += 1;
-  const base = `录音 ${state.recCount}`;
-  const specs = [{ buffer: data.mix, name: `${base} · 混音`, muted: false }];
+  const take = state.recCount;
+  const specs = [{ buffer: data.mix, key: 'name.recMix', muted: false }];
   if (bufferRms(data.backing) > 0.003) {
-    specs.push({ buffer: data.backing, name: `${base} · 伴奏`, muted: true });
+    specs.push({ buffer: data.backing, key: 'name.recBacking', muted: true });
   }
   if (bufferRms(data.mic) > 0.003) {
-    specs.push({ buffer: data.mic, name: `${base} · 麦克风`, muted: true });
+    specs.push({ buffer: data.mic, key: 'name.recMic', muted: true });
   }
 
   state.busy = true;
-  showProgress(true, '正在分析录音…');
+  showProgress(true, t('progress.record'));
   setProgress(0);
   try {
     for (let i = 0; i < specs.length; i++) {
-      el.progressLabel.textContent = `正在分析录音 ${i + 1}/${specs.length} · ${specs[i].name}`;
-      await engine.addBufferTrack(specs[i].buffer, {
-        name: specs[i].name,
+      const specName = t(specs[i].key, { n: take });
+      el.progressLabel.textContent = t('progress.recording', { i: i + 1, n: specs.length, name: specName });
+      const added = await engine.addBufferTrack(specs[i].buffer, {
+        name: specName,
         color: nextColor(),
         muted: specs[i].muted,
         onProgress: (ratio) => setProgress((i + ratio) / specs.length),
       });
+      added.nameKey = specs[i].key;
+      added.nameNum = take;
       refreshTracks();
     }
-    toast(`录音已生成 ${specs.length} 条音轨${backingAudible ? '，原有音轨已静音以免重复' : ''}；点音轨右侧的滑块调节音量/倍速/颜色`, 5600);
+    toast(t('rec.done', { n: specs.length }) + (backingAudible ? t('rec.mutedOld') : ''), 5600);
   } catch (err) {
-    toast(`录音处理失败：${err?.message || err}`);
+    toast(t('rec.fail', { msg: errorText(err) }));
   } finally {
     state.busy = false;
     showProgress(false);
@@ -786,7 +842,7 @@ function openTrackPanel(id) {
   const track = engine.fileTracks.find((t) => t.id === id);
   if (!track) return;
   state.panelTrackId = id;
-  el.tpName.textContent = track.name;
+  el.tpName.textContent = displayName(track);
   el.tpDot.style.setProperty('--c', track.color);
   const vol = Math.round((track.volume ?? 1) * 100);
   el.tpVolume.value = String(vol);
@@ -810,7 +866,7 @@ function applyPanelSpeed() {
   const speed = Number(el.tpSpeed.value) || 1;
   const preserve = el.tpPitchSeg.querySelector('.active')?.dataset.mode !== 'shift';
   el.tpSpeed.disabled = true;
-  toast('正在应用变速…', 1400);
+  toast(t('toast.speedApplying'), 1400);
   setTimeout(() => {
     try {
       engine.applyTrackSpeed(track.id, speed, preserve);
@@ -828,7 +884,7 @@ function applyPanelSpeed() {
 
 async function togglePlay() {
   if (!engine.fileTracks.length) {
-    toast('先导入音频，或点「示例」生成一段');
+    toast(t('toast.needAudio'));
     return;
   }
   if (engine.playing) {
@@ -921,6 +977,11 @@ function bindEvents() {
     addFiles(el.fileInput.files);
     el.fileInput.value = '';
   });
+  el.btnLang.addEventListener('click', () => {
+    state.settings.lang = state.settings.lang === 'zh' ? 'en' : 'zh';
+    saveSettings();
+    applyLanguage();
+  });
   el.btnRecord.addEventListener('click', toggleRecord);
   el.tpClose.addEventListener('click', closeTrackPanel);
   el.tpVolume.addEventListener('input', () => {
@@ -954,14 +1015,14 @@ function bindEvents() {
   el.tpExport.addEventListener('click', async () => {
     const track = panelTrack();
     if (!track) return;
-    toast('正在导出 WAV…', 1600);
+    toast(t('toast.exporting'), 1600);
     try {
       const blob = await engine.renderTrackWav(track.id);
-      if (!blob) throw new Error('无法生成音频');
-      downloadBlob(blob, `${track.name}.wav`);
-      toast('WAV 已导出');
+      if (!blob) throw new Error(t('export.noBlob'));
+      downloadBlob(blob, `${displayName(track)}.wav`);
+      toast(t('toast.exported'));
     } catch (err) {
-      toast(`导出失败：${err?.message || err}`);
+      toast(t('toast.exportFail', { msg: errorText(err) }));
     }
   });
   el.btnMic.addEventListener('click', toggleMic);
@@ -999,12 +1060,12 @@ function bindEvents() {
   el.rangeSelect.addEventListener('change', () => {
     state.settings.range = el.rangeSelect.value;
     applySettings();
-    toast('检测音域已更新（麦克风立即生效）');
+    toast(t('toast.range'));
   });
   el.sensSelect.addEventListener('change', () => {
     state.settings.sensitivity = el.sensSelect.value;
     applySettings();
-    toast('灵敏度已更新');
+    toast(t('toast.sens'));
   });
   el.windowSelect.addEventListener('change', () => {
     state.settings.windowSec = Number(el.windowSelect.value);
@@ -1021,14 +1082,14 @@ function bindEvents() {
   el.lineDragSelect.addEventListener('change', () => {
     state.settings.lineDrag = el.lineDragSelect.value;
     saveSettings();
-    toast('拖动白线的方式已更新', 2600);
+    toast(t('toast.lineDrag'), 2600);
   });
   el.dbToggle.addEventListener('change', () => {
     state.settings.showDb = el.dbToggle.checked;
     saveSettings();
     applyDbVisibility();
     updateReadouts(true);
-    toast(state.settings.showDb ? '已显示分贝电平' : '已隐藏分贝电平', 2200);
+    toast(t(state.settings.showDb ? 'toast.dbOn' : 'toast.dbOff'), 2200);
   });
   el.settingsReanalyze.addEventListener('click', () => {
     el.settingsPanel.classList.add('hidden');
@@ -1368,10 +1429,8 @@ function bindEvents() {
 async function boot() {
   loadSettings();
   applySettings();
-  updateModeUI();
   bindEvents();
-  updateMicUI();
-  refreshTracks();
+  applyLanguage();
   resize();
   requestAnimationFrame((ts) => {
     state.lastTs = ts;
@@ -1379,7 +1438,7 @@ async function boot() {
   });
 
   if (!window.isSecureContext) {
-    setTimeout(() => toast('麦克风需要 HTTPS 或 localhost；本地文件直接打开时只能看音频分析。', 6000), 800);
+    setTimeout(() => toast(t('mic.insecureBoot'), 6000), 800);
   }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
