@@ -20,6 +20,11 @@ const PRESETS = {
   wide: { minFreq: 40, maxFreq: 3000 },
 };
 
+const SHARP_LABELS = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+const FLAT_LABELS = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+const SOLFEGE_LABELS = ['Do', 'Do♯', 'Re', 'Re♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'];
+const DEGREE_LABELS = ['1', '♭2', '2', '♭3', '3', '4', '♯4', '5', '♭6', '6', '♭7', '7'];
+
 const SENS = {
   strict: { threshold: 0.1, minClarity: 0.65 },
   normal: { threshold: 0.15, minClarity: 0.5 },
@@ -44,6 +49,8 @@ const state = {
     lineMode: 'follow',
     lineDrag: 'freeze',
     showDb: true,
+    notation: 'sharp',
+    key: 0,
     lang: (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en',
   },
   view: { t0: 0, t1: 10, fMin: 65, fMax: 1600 },
@@ -117,6 +124,8 @@ const el = {
   timeDisplay: $('#time-display'),
   windowSelect: $('#window-select'),
   rangeSelect: $('#range-select'),
+  notationSelect: $('#notation-select'),
+  keySelect: $('#key-select'),
   sensSelect: $('#sens-select'),
   settingsPanel: $('#settings-panel'),
   settingsClose: $('#settings-close'),
@@ -143,6 +152,8 @@ function loadSettings() {
       lineMode: raw.lineMode === 'fixed' ? 'fixed' : 'follow',
       lineDrag: ['freeze', 'scroll', 'pause'].includes(raw.lineDrag) ? raw.lineDrag : 'freeze',
       showDb: raw.showDb !== false,
+      notation: ['sharp', 'flat', 'degree', 'solfege'].includes(raw.notation) ? raw.notation : 'sharp',
+      key: Number.isInteger(raw.key) && raw.key >= 0 && raw.key < 12 ? raw.key : 0,
       lang: raw.lang === 'en' || raw.lang === 'zh' ? raw.lang : state.settings.lang,
     };
     const hf = Number(raw.headFrac);
@@ -160,6 +171,28 @@ function saveSettings() {
   }
 }
 
+function updateNotationUI() {
+  el.keySelect.disabled = state.settings.notation !== 'degree';
+}
+
+function noteLabel(midi) {
+  const pc = ((midi % 12) + 12) % 12;
+  const octave = Math.floor(midi / 12) - 1;
+  const notation = state.settings.notation || 'sharp';
+  let main;
+  if (notation === 'degree') {
+    const tonic = Number(state.settings.key) || 0;
+    main = DEGREE_LABELS[((pc - tonic) % 12 + 12) % 12];
+  } else if (notation === 'flat') {
+    main = FLAT_LABELS[pc];
+  } else if (notation === 'solfege') {
+    main = SOLFEGE_LABELS[pc];
+  } else {
+    main = SHARP_LABELS[pc];
+  }
+  return { main, octave };
+}
+
 function applyDbVisibility() {
   el.readouts.classList.toggle('hide-db', state.settings.showDb === false);
 }
@@ -173,6 +206,9 @@ function applySettings() {
   engine.resetDetectors();
 
   el.rangeSelect.value = state.settings.range;
+  el.notationSelect.value = state.settings.notation;
+  el.keySelect.value = String(state.settings.key);
+  updateNotationUI();
   el.sensSelect.value = state.settings.sensitivity;
   el.windowSelect.value = String(state.settings.windowSec);
   el.lineDragSelect.value = state.settings.lineDrag;
@@ -421,7 +457,8 @@ function setCard(id, freq, db) {
     return;
   }
   const d = describeNote(freq);
-  noteEl.textContent = d.name;
+  const label = noteLabel(d.midi);
+  noteEl.innerHTML = `${label.main}<span class="ro-oct">${label.octave}</span>`;
   noteEl.classList.remove('dim');
   freqEl.textContent = `${freq.toFixed(freq < 99.5 ? 2 : 1)} Hz`;
   centsEl.textContent = `${d.cents > 0 ? '+' : ''}${d.cents}¢`;
@@ -432,7 +469,13 @@ function setCard(id, freq, db) {
 function setRowNote(id, freq) {
   const chip = el.tracks.querySelector(`[data-note="${id}"]`);
   if (!chip) return;
-  chip.textContent = freq ? describeNote(freq).name : '—';
+  if (!freq) {
+    chip.textContent = '—';
+  } else {
+    const d = describeNote(freq);
+    const label = noteLabel(d.midi);
+    chip.textContent = `${label.main}${label.octave}`;
+  }
 }
 
 function updateReadouts(force = false) {
@@ -1066,6 +1109,19 @@ function bindEvents() {
     state.settings.sensitivity = el.sensSelect.value;
     applySettings();
     toast(t('toast.sens'));
+  });
+  el.notationSelect.addEventListener('change', () => {
+    state.settings.notation = el.notationSelect.value;
+    saveSettings();
+    updateNotationUI();
+    refreshTracks();
+    updateReadouts(true);
+  });
+  el.keySelect.addEventListener('change', () => {
+    state.settings.key = Number(el.keySelect.value) || 0;
+    saveSettings();
+    refreshTracks();
+    updateReadouts(true);
   });
   el.windowSelect.addEventListener('change', () => {
     state.settings.windowSec = Number(el.windowSelect.value);

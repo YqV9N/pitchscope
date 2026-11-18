@@ -158,6 +158,32 @@
           </select>
         </label>
         <label class="field">
+          <span data-i18n="settings.notation">音名显示</span>
+          <select id="notation-select">
+            <option value="sharp" data-i18n="notation.sharp">音名 · 升号（C♯4）</option>
+            <option value="flat" data-i18n="notation.flat">音名 · 降号（D♭4）</option>
+            <option value="degree" data-i18n="notation.degree">简谱音级（1 2 ♭3）</option>
+            <option value="solfege" data-i18n="notation.solfege">唱名（Do Re Mi）</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="settings.key">调性（简谱音级）</span>
+          <select id="key-select">
+            <option value="0">C</option>
+            <option value="7">G</option>
+            <option value="2">D</option>
+            <option value="9">A</option>
+            <option value="4">E</option>
+            <option value="11">B</option>
+            <option value="6">F♯</option>
+            <option value="1">C♯</option>
+            <option value="5">F</option>
+            <option value="10">B♭</option>
+            <option value="3">E♭</option>
+            <option value="8">A♭</option>
+          </select>
+        </label>
+        <label class="field">
           <span data-i18n="settings.sens">灵敏度</span>
           <select id="sens-select">
             <option value="strict" data-i18n="sens.strict">严格（少一些误判）</option>
