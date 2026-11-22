@@ -628,9 +628,9 @@ export class Engine {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.07, now + 0.45);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.4);
+    gain.gain.exponentialRampToValueAtTime(0.24, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.085, now + 0.4);
+    // Hold the sustain level while the key is pressed; stopPiano() releases it.
 
     osc.connect(filter);
     filter.connect(gain);
@@ -648,10 +648,12 @@ export class Engine {
     this.pianoVoice = null;
     const ctx = this.ctx;
     const now = ctx.currentTime;
+    const current = Math.max(0.0001, voice.gain.gain.value);
     voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setTargetAtTime(0.0001, now, Math.max(0.02, release / 4));
+    voice.gain.gain.setValueAtTime(current, now);
+    voice.gain.gain.exponentialRampToValueAtTime(0.0001, now + release);
     try {
-      voice.osc.stop(now + release);
+      voice.osc.stop(now + release + 0.03);
     } catch {
       /* already stopped */
     }
