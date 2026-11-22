@@ -282,6 +282,52 @@ main {
   flex: 0 0 auto;
 }
 
+/* ---------- piano note badge ---------- */
+.piano-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 224, 208, 0.45);
+  background: rgba(9, 24, 31, 0.93);
+  color: #d7fffa;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+}
+.piano-badge.show { opacity: 1; visibility: visible; transform: none; }
+.pb-tag {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: #7fe9dc;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 224, 208, 0.35);
+}
+.pb-note {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.pb-oct { font-size: 0.52em; opacity: 0.65; margin-left: 1px; }
+.pb-freq {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.canvas-box.piano-active .follow-btn { display: none; }
+
 /* ---------- follow / mode buttons ---------- */
 .follow-btn {
   position: absolute;

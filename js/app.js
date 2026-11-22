@@ -73,6 +73,8 @@ const state = {
   recCount: 0,
   panelTrackId: null,
   piano: { activeMidi: null, hoverMidi: null, pointerId: null },
+  pianoBadgeMidi: null,
+  pianoBadgeTimer: 0,
   dpr: 1,
   lastTs: 0,
   lastMicPoll: 0,
@@ -117,6 +119,10 @@ const el = {
   tpExport: $('#tp-export'),
   tpClose: $('#tp-close'),
   btnFollow: $('#btn-follow'),
+  pianoBadge: $('#piano-badge'),
+  pbMain: $('#pb-main'),
+  pbOct: $('#pb-oct'),
+  pbFreq: $('#pb-freq'),
   btnMode: $('#btn-mode'),
   modeLabel: $('#mode-label'),
   lineDragSelect: $('#line-drag-select'),
@@ -229,6 +235,32 @@ function errorText(err) {
   return err?.message || String(err);
 }
 
+function renderPianoBadge(midi) {
+  const label = noteLabel(midi);
+  const freq = midiToFreq(midi);
+  el.pbMain.textContent = label.main;
+  el.pbOct.textContent = String(label.octave);
+  el.pbFreq.textContent = `${freq.toFixed(freq < 100 ? 2 : 1)} Hz`;
+}
+
+function showPianoBadge(midi) {
+  state.pianoBadgeMidi = midi;
+  renderPianoBadge(midi);
+  clearTimeout(state.pianoBadgeTimer);
+  el.pianoBadge.classList.add('show');
+  el.canvasBox.classList.add('piano-active');
+}
+
+function hidePianoBadge(delay = 850) {
+  clearTimeout(state.pianoBadgeTimer);
+  state.pianoBadgeTimer = setTimeout(() => {
+    el.pianoBadge.classList.remove('show');
+    el.canvasBox.classList.remove('piano-active');
+    state.pianoBadgeMidi = null;
+    updateFollowButton();
+  }, delay);
+}
+
 function displayName(track) {
   if (!track) return '';
   if (track.kind === 'mic') return t('name.mic');
@@ -261,6 +293,7 @@ function applyLanguage() {
   updateModeUI();
   updateMicUI();
   updateRecordUI();
+  if (state.pianoBadgeMidi != null) renderPianoBadge(state.pianoBadgeMidi);
   const track = panelTrack();
   if (track) el.tpName.textContent = displayName(track);
   refreshTracks();
@@ -1116,12 +1149,14 @@ function bindEvents() {
     updateNotationUI();
     refreshTracks();
     updateReadouts(true);
+    if (state.pianoBadgeMidi != null) renderPianoBadge(state.pianoBadgeMidi);
   });
   el.keySelect.addEventListener('change', () => {
     state.settings.key = Number(el.keySelect.value) || 0;
     saveSettings();
     refreshTracks();
     updateReadouts(true);
+    if (state.pianoBadgeMidi != null) renderPianoBadge(state.pianoBadgeMidi);
   });
   el.windowSelect.addEventListener('change', () => {
     state.settings.windowSec = Number(el.windowSelect.value);
@@ -1227,6 +1262,7 @@ function bindEvents() {
       if (hit && hit.midi !== state.piano.activeMidi) {
         state.piano.activeMidi = hit.midi;
         engine.playPiano(hit.midi);
+        showPianoBadge(hit.midi);
       }
       return;
     }
@@ -1298,6 +1334,7 @@ function bindEvents() {
       state.piano.activeMidi = key.midi;
       state.piano.hoverMidi = key.midi;
       engine.playPiano(key.midi);
+      showPianoBadge(key.midi);
       return;
     }
 
@@ -1357,6 +1394,7 @@ function bindEvents() {
       state.piano.pointerId = null;
       state.piano.activeMidi = null;
       engine.stopPiano(0.32);
+      hidePianoBadge();
       return;
     }
     const drag = state.drag;
@@ -1403,6 +1441,7 @@ function bindEvents() {
       state.piano.pointerId = null;
       state.piano.activeMidi = null;
       engine.stopPiano(0.2);
+      hidePianoBadge(300);
       return;
     }
     const drag = state.drag;

@@ -31,6 +31,7 @@ const MESSAGES = {
   ],
 
   'follow.return': ['回到当前', 'Back to live'],
+  'piano.tag': ['钢琴', 'Piano'],
 
   'transport.play': ['播放', 'Play'],
   'transport.pause': ['暂停', 'Pause'],
